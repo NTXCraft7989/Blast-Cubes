@@ -1,0 +1,887 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Block Blast - Premium Edition</title>
+    <style>
+        :root {
+            --bg-color: #0d0e15;
+            --container-bg: #16161e;
+            --grid-bg: #1f2335;
+            --grid-cell: #13141f;
+            --text-main: #ffffff;
+            --text-muted: #565f89;
+            --text-label: #a9b1d6;
+            --panel-bg: rgba(10, 11, 16, 0.98);
+            --setting-row-bg: #16161e;
+            --setting-border: #24283b;
+            --accent-glow: rgba(255, 255, 255, 0.2);
+        }
+
+        [data-theme="light"] {
+            --bg-color: #e1e2e7;
+            --container-bg: #f5f6f9;
+            --grid-bg: #dcdfe7;
+            --grid-cell: #e9ecf2;
+            --text-main: #1c1d24;
+            --text-muted: #8c92ac;
+            --text-label: #4c516d;
+            --panel-bg: rgba(245, 246, 249, 0.98);
+            --setting-row-bg: #e9ecf2;
+            --setting-border: #cbd0dc;
+            --accent-glow: rgba(0, 0, 0, 0.1);
+        }
+
+        body {
+            margin: 0;
+            padding: 0;
+            background-color: var(--bg-color);
+            color: var(--text-main);
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            overflow: hidden;
+            touch-action: none;
+            -webkit-tap-highlight-color: transparent;
+            user-select: none;
+            -webkit-user-select: none;
+            transition: background-color 0.2s ease;
+        }
+        #game-container {
+            position: relative;
+            width: 100vw;
+            height: 100vh;
+            max-width: 430px;
+            max-height: 880px;
+            aspect-ratio: 430 / 880;
+            background: var(--container-bg);
+            box-shadow: 0 0 60px rgba(0,0,0,0.5);
+            display: flex;
+            flex-direction: column;
+            box-sizing: border-box;
+            contain: layout size;
+            transition: background 0.2s ease;
+        }
+        @media (min-aspect-ratio: 430/880) {
+            #game-container { width: auto; height: 100vh; }
+        }
+        @media (max-aspect-ratio: 430/880) {
+            #game-container { width: 100vw; height: auto; }
+        }
+        header {
+            height: 15%;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0 24px;
+            box-sizing: border-box;
+            z-index: 2;
+            position: relative;
+        }
+        .score-box {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            will-change: transform;
+        }
+        .score-box.left { align-items: flex-start; width: 25%; }
+        .score-box.center { align-items: center; width: 50%; }
+        .score-box.right { align-items: flex-end; width: 25%; }
+        
+        .score-label {
+            font-size: 11px;
+            text-transform: uppercase;
+            letter-spacing: 1.5px;
+            color: var(--text-muted);
+            margin-bottom: 2px;
+            font-weight: 800;
+        }
+        .score-value {
+            font-weight: 900;
+            color: var(--text-main);
+            transition: transform 0.1s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+        #score {
+            font-size: 46px;
+            text-shadow: 0 0 15px var(--accent-glow);
+        }
+        #best-score {
+            font-size: 26px;
+            color: #ff9e64;
+        }
+        #settings-btn {
+            background: var(--grid-bg);
+            border: 1px solid var(--text-muted);
+            color: var(--text-main);
+            border-radius: 0px;
+            width: 40px;
+            height: 40px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 20px;
+            cursor: pointer;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.2);
+            transition: transform 0.1s;
+        }
+        #settings-btn:active { transform: scale(0.9); }
+        canvas {
+            width: 100%;
+            height: 85%;
+            display: block;
+            z-index: 1;
+            contain: strict;
+        }
+        .overlay-panel {
+            position: absolute;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: var(--panel-bg);
+            display: none;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            z-index: 10;
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            padding: 30px;
+            box-sizing: border-box;
+        }
+        .overlay-panel h2 {
+            font-size: 42px;
+            color: #7aa2f7;
+            margin: 0 0 10px 0;
+            font-weight: 900;
+            letter-spacing: -1px;
+        }
+        #game-over-screen h2 {
+            color: #f7768e;
+        }
+        .setting-row {
+            width: 100%;
+            max-width: 300px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin: 12px 0;
+            background: var(--setting-row-bg);
+            padding: 12px 20px;
+            border-radius: 0px;
+            border: 1px solid var(--setting-border);
+        }
+        .setting-row span {
+            font-weight: 700;
+            color: var(--text-label);
+        }
+        .setting-row select {
+            background: var(--grid-bg);
+            color: var(--text-main);
+            border: 1px solid var(--text-muted);
+            padding: 6px 12px;
+            border-radius: 0px;
+            font-weight: 700;
+            outline: none;
+        }
+        .ui-btn {
+            width: 100%;
+            max-width: 280px;
+            padding: 18px 0;
+            font-size: 20px;
+            font-weight: 900;
+            background: linear-gradient(135deg, #7aa2f7, #565f89);
+            color: #ffffff;
+            border: none;
+            border-radius: 0px;
+            cursor: pointer;
+            box-shadow: 0 8px 30px rgba(122, 162, 247, 0.3);
+            margin: 10px 0;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            transition: transform 0.1s, opacity 0.2s;
+        }
+        .ui-btn:active { transform: scale(0.97); }
+    </style>
+</head>
+<body>
+
+<div id="game-container">
+    <header>
+        <div class="score-box left">
+            <div class="score-label">Best</div>
+            <div id="best-score" class="score-value">0</div>
+        </div>
+        <div class="score-box center">
+            <div class="score-label">Score</div>
+            <div id="score" class="score-value">0</div>
+        </div>
+        <div class="score-box right">
+            <button id="settings-btn" onclick="toggleSettings(true)">⚙</button>
+        </div>
+    </header>
+    
+    <canvas id="gameCanvas"></canvas>
+    
+    <div id="game-over-screen" class="overlay-panel">
+        <h2>Out of Moves</h2>
+        <p style="font-size:22px; color:var(--text-label); margin:0 0 30px 0; font-weight:600;">Final Score: <span id="final-score" style="color:var(--text-main); font-size:28px;">0</span></p>
+        <button class="ui-btn" onclick="resetGame()">Try Again</button>
+    </div>
+
+    <div id="settings-screen" class="overlay-panel">
+        <h2>Customization</h2>
+        
+        <div class="setting-row">
+            <span>Interface Mode</span>
+            <select id="setting-ui-mode" onchange="updateSettings()">
+                <option value="dark">Dark Theme</option>
+                <option value="light">Light Theme</option>
+            </select>
+        </div>
+
+        <div class="setting-row">
+            <span>Theme Blocks</span>
+            <select id="setting-theme" onchange="updateSettings()">
+                <option value="neon">Neon Block</option>
+                <option value="minimal">Minimal Ink</option>
+                <option value="pastel">Soft Pastel</option>
+            </select>
+        </div>
+
+        <div class="setting-row">
+            <span>Block Style</span>
+            <select id="setting-style" onchange="updateSettings()">
+                <option value="flat">Flat Square</option>
+                <option value="3d">Hyper 3D</option>
+            </select>
+        </div>
+
+        <div class="setting-row">
+            <span>Spawn Speed</span>
+            <select id="setting-speed" onchange="updateSettings()">
+                <option value="normal">Normal</option>
+                <option value="fast">Instant Roll</option>
+            </select>
+        </div>
+
+        <button class="ui-btn" style="max-width:200px" onclick="toggleSettings(false)">Save & Close</button>
+    </div>
+</div>
+
+<script>
+const canvas = document.getElementById('gameCanvas');
+const ctx = canvas.getContext('2d', { alpha: false });
+const dpr = window.devicePixelRatio || 1;
+
+const logicalWidth = 450;
+const logicalHeight = 700;
+
+canvas.width = logicalWidth * dpr;
+canvas.height = logicalHeight * dpr;
+ctx.scale(dpr, dpr);
+
+const cellSize = 46;
+const gridX = (logicalWidth - (cellSize * 8)) / 2;
+const gridY = 20;
+const slotCenters = [85, 225, 365];
+const slotY = 540;
+
+let grid = Array(8).fill().map(() => Array(8).fill(0));
+let choices = [null, null, null];
+
+let targetScore = 0;
+let displayedScore = 0;
+let gameOver = false;
+let settingsOpen = false;
+
+let bestScore = 0;
+let config = { uiMode: 'dark', theme: 'neon', style: 'flat', speed: 'normal' };
+
+function applyThemeDOM() {
+    document.documentElement.setAttribute('data-theme', config.uiMode);
+}
+
+function initStorage() {
+    try {
+        bestScore = parseInt(localStorage.getItem('bb_perf_best')) || 0;
+        const savedConfig = localStorage.getItem('bb_perf_config');
+        if (savedConfig) config = Object.assign(config, JSON.parse(savedConfig));
+        applyThemeDOM();
+
+        const savedGrid = localStorage.getItem('bb_state_grid');
+        const savedChoices = localStorage.getItem('bb_state_choices');
+        const savedCurrentScore = localStorage.getItem('bb_state_current_score');
+        const savedGameOver = localStorage.getItem('bb_state_gameover');
+
+        if (savedGrid && savedChoices && savedCurrentScore) {
+            grid = JSON.parse(savedGrid);
+            choices = JSON.parse(savedChoices);
+            targetScore = parseInt(savedCurrentScore);
+            displayedScore = targetScore;
+            gameOver = savedGameOver === 'true';
+            
+            if (gameOver) {
+                document.getElementById('final-score').innerText = targetScore;
+                document.getElementById('game-over-screen').style.display = 'flex';
+            }
+        } else {
+            generateChoices();
+            forceSaveStateInstant();
+        }
+    } catch (e) {
+        generateChoices();
+    }
+    
+    document.getElementById('score').innerText = targetScore;
+    document.getElementById('best-score').innerText = bestScore;
+    document.getElementById('setting-ui-mode').value = config.uiMode;
+    document.getElementById('setting-theme').value = config.theme;
+    document.getElementById('setting-style').value = config.style;
+    document.getElementById('setting-speed').value = config.speed;
+}
+
+// CRITICAL ULTRA PERSISTENCE ENGINE: Saves state completely synchronously to override Google Sites iframe closures
+function forceSaveStateInstant() {
+    try {
+        localStorage.setItem('bb_perf_best', bestScore);
+        localStorage.setItem('bb_perf_config', JSON.stringify(config));
+        localStorage.setItem('bb_state_grid', JSON.stringify(grid));
+        localStorage.setItem('bb_state_choices', JSON.stringify(choices));
+        localStorage.setItem('bb_state_current_score', targetScore);
+        localStorage.setItem('bb_state_gameover', gameOver);
+    } catch(e) {}
+}
+
+// Intercepts tab minimizing or switches inside Google Sites container layout structures
+document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'hidden') {
+        forceSaveStateInstant();
+    }
+});
+
+window.addEventListener('beforeunload', forceSaveStateInstant);
+
+let particles = [];
+let popups = [];
+let overlayTexts = [];
+
+let isDragging = false;
+let draggingBlock = null;
+let draggedFromSlot = -1;
+let currentTouchX = 0;
+let currentTouchY = 0;
+let touchOffsetX = 0;
+let touchOffsetY = 0;
+
+const PALETTES = {
+    neon: {
+        '#f7768e': { main: '#f7768e', top: '#ff98a4', shadow: '#c4455f' }, 
+        '#ff9e64': { main: '#ff9e64', top: '#ffba8a', shadow: '#cc6a32' }, 
+        '#e0af68': { main: '#e0af68', top: '#ffd48f', shadow: '#b38239' }, 
+        '#9ece6a': { main: '#9ece6a', top: '#c3e896', shadow: '#6a9e3a' }, 
+        '#7dcfff': { main: '#7dcfff', top: '#a3dfff', shadow: '#4a9ece' }, 
+        '#7aa2f7': { main: '#7aa2f7', top: '#a4c2ff', shadow: '#4b75cc' }, 
+        '#bb9af7': { main: '#bb9af7', top: '#d4bfff', shadow: '#8b69cc' }
+    },
+    minimal: {
+        '#f7768e': { main: '#393b44', top: '#4e515d', shadow: '#232429' }, 
+        '#ff9e64': { main: '#525666', top: '#6b7085', shadow: '#3a3d49' }, 
+        '#e0af68': { main: '#6b7280', top: '#8b94a5', shadow: '#4b505c' }, 
+        '#9ece6a': { main: '#4b5563', top: '#637085', shadow: '#313741' }, 
+        '#7dcfff': { main: '#d1d5db', top: '#f3f4f6', shadow: '#9ca3af' }, 
+        '#7aa2f7': { main: '#9ca3af', top: '#e5e7eb', shadow: '#6b7280' }, 
+        '#bb9af7': { main: '#f3f4f6', top: '#ffffff', shadow: '#d1d5db' }
+    },
+    pastel: {
+        '#f7768e': { main: '#ffb3ba', top: '#ffd1d6', shadow: '#e0969d' }, 
+        '#ff9e64': { main: '#ffdfba', top: '#fff0d9', shadow: '#e0c29f' }, 
+        '#e0af68': { main: '#ffffba', top: '#ffffe3', shadow: '#e0e09f' }, 
+        '#9ece6a': { main: '#baffc9', top: '#dcffd9', shadow: '#9ee0ad' }, 
+        '#7dcfff': { main: '#bae1ff', top: '#d9efff', shadow: '#9ec0e0' }, 
+        '#7aa2f7': { main: '#c9baff', top: '#e3d9ff', shadow: '#ad9ee0' }, 
+        '#bb9af7': { main: '#ffbaff', top: '#ffd9ff', shadow: '#e0ade0' }
+    }
+};
+
+const SHAPES = [
+    { matrix: [[1]], color: '#f7768e' },
+    { matrix: [[1, 1]], color: '#ff9e64' },
+    { matrix: [[1], [1]], color: '#ff9e64' },
+    { matrix: [[1, 1, 1]], color: '#e0af68' },
+    { matrix: [[1], [1], [1]], color: '#e0af68' },
+    { matrix: [[1, 1], [1, 1]], color: '#9ece6a' },
+    { matrix: [[1, 1, 1], [0, 1, 0]], color: '#7dcfff' },
+    { matrix: [[0, 1, 0], [1, 1, 1]], color: '#7dcfff' },
+    { matrix: [[1, 0], [1, 0], [1, 1]], color: '#7aa2f7' },
+    { matrix: [[0, 1], [0, 1], [1, 1]], color: '#7aa2f7' },
+    { matrix: [[1, 1, 1, 1]], color: '#bb9af7' },
+    { matrix: [[1], [1], [1], [1]], color: '#bb9af7' },
+    { matrix: [[1, 1, 0], [0, 1, 1]], color: '#f7768e' }
+];
+
+function toggleSettings(open) {
+    settingsOpen = open;
+    document.getElementById('settings-screen').style.display = open ? 'flex' : 'none';
+}
+
+function updateSettings() {
+    config.uiMode = document.getElementById('setting-ui-mode').value;
+    config.theme = document.getElementById('setting-theme').value;
+    config.style = document.getElementById('setting-style').value;
+    config.speed = document.getElementById('setting-speed').value;
+    applyThemeDOM();
+    forceSaveStateInstant();
+}
+
+function drawSquareBlock(x, y, size, hexColor, alpha = 1.0, isGhost = false) {
+    ctx.save();
+    ctx.globalAlpha = alpha;
+
+    const themeMap = PALETTES[config.theme] || PALETTES.neon;
+    const theme = themeMap[hexColor] || { main: hexColor, top: '#fff' };
+    const padding = 1;
+
+    x += padding; y += padding; size -= padding * 2;
+
+    if (isGhost) {
+        ctx.fillStyle = theme.main;
+        ctx.globalAlpha = 0.25;
+        ctx.fillRect(x, y, size, size);
+        ctx.strokeStyle = theme.top;
+        ctx.lineWidth = 2;
+        ctx.strokeRect(x + 1, y + 1, size - 2, size - 2);
+        ctx.restore();
+        return;
+    }
+
+    if (config.style === '3d') {
+        const depth = size * 0.15;
+        ctx.fillStyle = theme.shadow;
+        ctx.fillRect(x, y + depth, size, size - depth);
+        ctx.fillStyle = theme.main;
+        ctx.fillRect(x, y, size, size - depth);
+        ctx.fillStyle = theme.top;
+        ctx.fillRect(x, y, size, size * 0.25);
+    } else {
+        ctx.fillStyle = theme.main;
+        ctx.fillRect(x, y, size, size);
+    }
+    ctx.restore();
+}
+
+function createExplosion(gridRow, gridCol, color) {
+    if (particles.length > 40) return;
+    const startX = gridX + gridCol * cellSize + cellSize / 2;
+    const startY = gridY + gridRow * cellSize + cellSize / 2;
+    const themeMap = PALETTES[config.theme] || PALETTES.neon;
+    const theme = themeMap[color] || { main: color };
+    
+    for (let i = 0; i < 10; i++) {
+        particles.push({
+            x: startX, y: startY,
+            vx: (Math.random() - 0.5) * 12,
+            vy: (Math.random() - 0.5) * 12,
+            radius: Math.random() * 4 + 2,
+            color: theme.main, alpha: 1, decay: Math.random() * 0.03 + 0.02
+        });
+    }
+}
+
+function createScorePopup(text, sRow, sCol) {
+    if (popups.length > 3) popups.shift();
+    popups.push({
+        x: gridX + sCol * cellSize + cellSize / 2,
+        y: gridY + sRow * cellSize + cellSize / 2,
+        text: text, alpha: 1, vy: -2.0
+    });
+}
+
+function triggerOverlayComboText(linesCount) {
+    let msg = "AWESOME!";
+    let color = "#7dcfff";
+    if (linesCount >= 2) { msg = "MEGA BLAST!"; color = "#ff9e64"; }
+    if (linesCount >= 3) { msg = "UNBELIEVABLE!!"; color = "#f7768e"; }
+
+    overlayTexts.length = 0; 
+    overlayTexts.push({
+        text: msg, color: color, x: logicalWidth / 2, y: gridY + (cellSize * 4), 
+        scale: 0.4, alpha: 1.0, state: 'grow' 
+    });
+}
+
+function generateChoices() {
+    for (let i = 0; i < 3; i++) {
+        const randIndex = Math.floor(Math.random() * SHAPES.length);
+        choices[i] = JSON.parse(JSON.stringify(SHAPES[randIndex]));
+    }
+}
+
+function canPlace(matrix, startRow, startCol) {
+    for (let r = 0; r < matrix.length; r++) {
+        for (let c = 0; c < matrix[r].length; c++) {
+            if (matrix[r][c]) {
+                const targetR = startRow + r;
+                const targetC = startCol + c;
+                if (targetR < 0 || targetR >= 8 || targetC < 0 || targetC >= 8) return false;
+                if (grid[targetR][targetC] !== 0) return false;
+            }
+        }
+    }
+    return true;
+}
+
+function isChoicePlayable(choice) {
+    if (!choice) return false;
+    for (let r = 0; r < 8; r++) {
+        for (let c = 0; c < 8; c++) {
+            if (canPlace(choice.matrix, r, c)) return true;
+        }
+    }
+    return false;
+}
+
+function getComboHighlights(matrix, startRow, startCol) {
+    let rowsToClear = [];
+    let colsToClear = [];
+    if (!canPlace(matrix, startRow, startCol)) return { rows: [], cols: [] };
+
+    let tempGrid = grid.map(row => [...row]);
+    for (let r = 0; r < matrix.length; r++) {
+        for (let c = 0; c < matrix[r].length; c++) {
+            if (matrix[r][c]) {
+                tempGrid[startRow + r][startCol + c] = 1;
+            }
+        }
+    }
+
+    for (let r = 0; r < 8; r++) {
+        if (tempGrid[r].every(cell => cell !== 0)) rowsToClear.push(r);
+    }
+    for (let c = 0; c < 8; c++) {
+        let matches = true;
+        for (let r = 0; r < 8; r++) {
+            if (tempGrid[r][c] === 0) { matches = false; break; }
+        }
+        if (matches) colsToClear.push(c);
+    }
+    return { rows: rowsToClear, cols: colsToClear };
+}
+
+function checkLines() {
+    let rowsToClear = [];
+    let colsToClear = [];
+
+    for (let r = 0; r < 8; r++) {
+        if (grid[r].every(cell => cell !== 0)) rowsToClear.push(r);
+    }
+    for (let c = 0; c < 8; c++) {
+        let matches = true;
+        for (let r = 0; r < 8; r++) {
+            if (grid[r][c] === 0) { matches = false; break; }
+        }
+        if (matches) colsToClear.push(c);
+    }
+
+    const totalCleared = rowsToClear.length + colsToClear.length;
+    if (totalCleared > 0) {
+        triggerOverlayComboText(totalCleared);
+        
+        rowsToClear.forEach(r => {
+            for(let c=0; c<8; c++) createExplosion(r, c, grid[r][c]);
+            grid[r] = Array(8).fill(0);
+        });
+        colsToClear.forEach(c => {
+            for (let r = 0; r < 8; r++) {
+                if (grid[r][c] !== 0) createExplosion(r, c, grid[r][c]);
+                grid[r][c] = 0;
+            }
+        });
+
+        const addedScore = totalCleared * 10 + (totalCleared > 1 ? (totalCleared - 1) * 20 : 0);
+        targetScore += addedScore;
+        
+        const targetRow = rowsToClear.length > 0 ? rowsToClear[0] : 3;
+        const targetCol = colsToClear.length > 0 ? colsToClear[0] : 3;
+        createScorePopup(`+${addedScore}`, targetRow, targetCol);
+
+        const scoreEl = document.getElementById('score');
+        scoreEl.style.transform = 'scale(1.15)';
+        setTimeout(() => scoreEl.style.transform = 'scale(1)', 100);
+    }
+}
+
+function checkGameOver() {
+    const activeChoices = choices.filter(c => c !== null);
+    if (activeChoices.length === 0) return; 
+
+    let safe = false;
+    for (let choice of activeChoices) {
+        if (isChoicePlayable(choice)) { safe = true; break; }
+    }
+
+    if (!safe) {
+        gameOver = true;
+        document.getElementById('final-score').innerText = targetScore;
+        document.getElementById('game-over-screen').style.display = 'flex';
+    }
+    forceSaveStateInstant();
+}
+
+function resetGame() {
+    grid = Array(8).fill().map(() => Array(8).fill(0));
+    targetScore = 0;
+    displayedScore = 0;
+    gameOver = false;
+    particles.length = 0;
+    popups.length = 0;
+    overlayTexts.length = 0;
+    document.getElementById('game-over-screen').style.display = 'none';
+    document.getElementById('score').innerText = 0;
+    generateChoices();
+    forceSaveStateInstant();
+}
+
+function getCanvasCoords(e) {
+    const rect = canvas.getBoundingClientRect();
+    const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+    const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+    return {
+        x: ((clientX - rect.left) / rect.width) * logicalWidth,
+        y: ((clientY - rect.top) / rect.height) * logicalHeight
+    };
+}
+
+function handleStart(e) {
+    if (gameOver || settingsOpen) return;
+    const coords = getCanvasCoords(e);
+    let slot = -1;
+
+    for (let i = 0; i < 3; i++) {
+        if (Math.abs(coords.x - slotCenters[i]) < 55 && Math.abs(coords.y - slotY) < 55) {
+            if (choices[i]) { slot = i; break; }
+        }
+    }
+
+    if (slot !== -1) {
+        draggingBlock = choices[slot];
+        draggedFromSlot = slot;
+        currentTouchX = coords.x;
+        currentTouchY = coords.y;
+        
+        const bW = draggingBlock.matrix[0].length * cellSize;
+        const bH = draggingBlock.matrix.length * cellSize;
+        
+        touchOffsetX = bW / 2;
+        touchOffsetY = e.touches ? bH + 85 : bH / 2; 
+
+        isDragging = true;
+    }
+}
+
+function handleMove(e) {
+    if (!isDragging || gameOver || settingsOpen) return;
+    const coords = getCanvasCoords(e);
+    currentTouchX = coords.x;
+    currentTouchY = coords.y;
+}
+
+function handleEnd(e) {
+    if (!isDragging || gameOver || settingsOpen) return;
+    
+    const targetX = currentTouchX - touchOffsetX;
+    const targetY = currentTouchY - touchOffsetY;
+
+    const hoverCol = Math.round((targetX - gridX) / cellSize);
+    const hoverRow = Math.round((targetY - gridY) / cellSize);
+
+    if (canPlace(draggingBlock.matrix, hoverRow, hoverCol)) {
+        let blocksPlaced = 0;
+        for (let r = 0; r < draggingBlock.matrix.length; r++) {
+            for (let c = 0; c < draggingBlock.matrix[r].length; c++) {
+                if (draggingBlock.matrix[r][c]) {
+                    grid[hoverRow + r][hoverCol + c] = draggingBlock.color;
+                    blocksPlaced++;
+                }
+            }
+        }
+        targetScore += blocksPlaced;
+        choices[draggedFromSlot] = null;
+
+        checkLines();
+        if (choices.every(c => c === null)) generateChoices();
+        
+        checkGameOver();
+        forceSaveStateInstant(); // Instant hard save on piece landing
+    }
+
+    isDragging = false;
+    draggingBlock = null;
+    draggedFromSlot = -1;
+}
+
+canvas.addEventListener('touchstart', (e) => { e.preventDefault(); handleStart(e); }, {passive: false});
+canvas.addEventListener('touchmove', (e) => { e.preventDefault(); handleMove(e); }, {passive: false});
+canvas.addEventListener('touchend', (e) => { e.preventDefault(); handleEnd(e); }, {passive: false});
+canvas.addEventListener('mousedown', handleStart);
+canvas.addEventListener('mousemove', handleMove);
+canvas.addEventListener('mouseup', handleEnd);
+
+function gameLoop() {
+    if (displayedScore < targetScore) {
+        if (config.speed === 'fast') {
+            displayedScore = targetScore;
+        } else {
+            displayedScore += Math.ceil((targetScore - displayedScore) * 0.15);
+        }
+        if (displayedScore > targetScore) displayedScore = targetScore;
+        
+        document.getElementById('score').innerText = displayedScore;
+        
+        if (displayedScore > bestScore) {
+            bestScore = displayedScore;
+            document.getElementById('best-score').innerText = bestScore;
+            forceSaveStateInstant(); // Save immediately when highscore ticks up
+        }
+    }
+
+    ctx.fillStyle = getComputedStyle(document.documentElement).getPropertyValue('--container-bg').trim();
+    ctx.fillRect(0, 0, logicalWidth, logicalHeight);
+
+    ctx.fillStyle = getComputedStyle(document.documentElement).getPropertyValue('--grid-bg').trim();
+    ctx.fillRect(gridX - 8, gridY - 8, (cellSize * 8) + 16, (cellSize * 8) + 16);
+
+    const emptyCellColor = getComputedStyle(document.documentElement).getPropertyValue('--grid-cell').trim();
+
+    let highlights = { rows: [], cols: [] };
+    if (isDragging && draggingBlock) {
+        const tx = currentTouchX - touchOffsetX;
+        const ty = currentTouchY - touchOffsetY;
+        const hc = Math.round((tx - gridX) / cellSize);
+        const hr = Math.round((ty - gridY) / cellSize);
+        highlights = getComboHighlights(draggingBlock.matrix, hr, hc);
+    }
+
+    for (let r = 0; r < 8; r++) {
+        for (let c = 0; c < 8; c++) {
+            const px = gridX + c * cellSize;
+            const py = gridY + r * cellSize;
+            if (grid[r][c] === 0) {
+                ctx.fillStyle = emptyCellColor;
+                ctx.fillRect(px + 1, py + 1, cellSize - 2, cellSize - 2);
+            } else {
+                drawSquareBlock(px, py, cellSize, grid[r][c]);
+            }
+
+            if (highlights.rows.includes(r) || highlights.cols.includes(c)) {
+                ctx.fillStyle = 'rgba(122, 162, 247, 0.35)'; 
+                ctx.fillRect(px + 1, py + 1, cellSize - 2, cellSize - 2);
+            }
+        }
+    }
+
+    choices.forEach((choice, index) => {
+        if (!choice || (isDragging && draggedFromSlot === index)) return;
+        const playable = isChoicePlayable(choice);
+        ctx.globalAlpha = playable ? 1.0 : 0.35;
+
+        const miniCell = 22;
+        const bW = choice.matrix[0].length * miniCell;
+        const bH = choice.matrix.length * miniCell;
+        const startX = slotCenters[index] - bW / 2;
+        const startY = slotY - bH / 2;
+
+        for (let r = 0; r < choice.matrix.length; r++) {
+            for (let c = 0; c < choice.matrix[r].length; c++) {
+                if (choice.matrix[r][c]) {
+                    drawSquareBlock(startX + c * miniCell, startY + r * miniCell, miniCell, playable ? choice.color : '#565f89');
+                }
+            }
+        }
+        ctx.globalAlpha = 1.0;
+    });
+
+    if (isDragging && draggingBlock) {
+        const targetX = currentTouchX - touchOffsetX;
+        const targetY = currentTouchY - touchOffsetY;
+
+        const hoverCol = Math.round((targetX - gridX) / cellSize);
+        const hoverRow = Math.round((targetY - gridY) / cellSize);
+
+        if (canPlace(draggingBlock.matrix, hoverRow, hoverCol)) {
+            for (let r = 0; r < draggingBlock.matrix.length; r++) {
+                for (let c = 0; c < draggingBlock.matrix[r].length; c++) {
+                    if (draggingBlock.matrix[r][c]) {
+                        drawSquareBlock(gridX + (hoverCol + c) * cellSize, gridY + (hoverRow + r) * cellSize, cellSize, draggingBlock.color, 1.0, true);
+                    }
+                }
+            }
+        }
+
+        ctx.save();
+        const blockOriginX = currentTouchX - touchOffsetX;
+        const blockOriginY = currentTouchY - touchOffsetY;
+
+        for (let r = 0; r < draggingBlock.matrix.length; r++) {
+            for (let c = 0; c < draggingBlock.matrix[r].length; c++) {
+                if (draggingBlock.matrix[r][c]) {
+                    drawSquareBlock(blockOriginX + c * cellSize, blockOriginY + r * cellSize, cellSize, draggingBlock.color);
+                }
+            }
+        }
+        ctx.restore();
+    }
+
+    for (let i = overlayTexts.length - 1; i >= 0; i--) {
+        let ot = overlayTexts[i];
+        if (ot.state === 'grow') {
+            ot.scale += (1.2 - ot.scale) * 0.15;
+            if (ot.scale >= 1.15) ot.state = 'fade';
+        } else {
+            ot.alpha -= 0.03; ot.y -= 0.5;
+        }
+        if (ot.alpha <= 0) { overlayTexts.splice(i, 1); } else {
+            ctx.save(); ctx.globalAlpha = ot.alpha; ctx.translate(ot.x, ot.y); ctx.scale(ot.scale, ot.scale);
+            ctx.fillStyle = ot.color; ctx.font = '900 42px -apple-system, sans-serif';
+            ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText(ot.text, 0, 0); ctx.restore();
+        }
+    }
+
+    for (let i = popups.length - 1; i >= 0; i--) {
+        let pop = popups[i]; pop.y += pop.vy; pop.alpha -= 0.03;
+        if (pop.alpha <= 0) { popups.splice(i, 1); } else {
+            ctx.save(); ctx.globalAlpha = pop.alpha; ctx.fillStyle = '#ffffff';
+            ctx.font = '900 34px -apple-system, sans-serif'; ctx.textAlign = 'center';
+            ctx.fillText(pop.text, pop.x, pop.y); ctx.restore();
+        }
+    }
+
+    for (let i = particles.length - 1; i >= 0; i--) {
+        let p = particles[i]; p.x += p.vx; p.y += p.vy; p.alpha -= p.decay;
+        if (p.alpha <= 0) { particles.splice(i, 1); } else {
+            ctx.save(); ctx.globalAlpha = p.alpha; ctx.fillStyle = p.color;
+            ctx.fillRect(p.x - p.radius, p.y - p.radius, p.radius * 2, p.radius * 2); ctx.restore();
+        }
+    }
+
+    requestAnimationFrame(gameLoop);
+}
+
+if ('serviceWorker' in navigator) {
+    window.addEventListener('load', () => {
+        const swBlob = new Blob([`
+            const CACHE_NAME = 'block-blast-v4';
+            const ASSETS = ['./', './index.html'];
+            self.addEventListener('install', (e) => { e.waitUntil(caches.open(CACHE_NAME).then((c) => c.addAll(ASSETS))); });
+            self.addEventListener('fetch', (e) => { e.respondWith(caches.match(e.request).then((res) => res || fetch(e.request))); });
+        `], { type: 'application/javascript' });
+        navigator.serviceWorker.register(URL.createObjectURL(swBlob), { scope: './' }).catch(()=>{});
+    });
+}
+
+initStorage();
+gameLoop();
+</script>
+</body>
+</html>
